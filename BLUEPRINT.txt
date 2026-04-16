@@ -1,0 +1,53 @@
+sentry-vision-edge/
+│
+├── .github/                             # CI/CD for model quantization and tracking math
+│   └── workflows/
+│       ├── test-behavior-logic.yml      # Validates the heuristic filtering algorithms
+│       └── build-edge-image.yml         # Compiles the stack for NVIDIA Jetson (ARM64)
+│
+├── vision_engine/                       # Python: AI Inference & Object Detection
+│   ├── app/
+│   │   ├── camera/
+│   │   │   └── thermal_stream.py        # Interfaces with FLIR/Seek thermal via V4L2
+│   │   ├── inference/
+│   │   │   └── yolo_detector.py         # Runs quantized YOLOv8/v10 using TensorRT
+│   │   ├── tracking/
+│   │   │   └── sort_tracker.py          # Implements Simple Online and Realtime Tracking (SORT)
+│   │   └── main.py                      # Streams metadata (bounding boxes) to the Go brain
+│   ├── models/
+│   │   └── custom_sentry_n.engine       # Optimized TensorRT model for human/vehicle detection
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── behavioral_brain/                    # Go: The Decision & Alerting Engine
+│   ├── cmd/
+│   │   └── sentry/
+│   │       └── main.go                  # Main loop: Evaluates track history vs. alert rules
+│   ├── internal/
+│   │   ├── heuristics/
+│   │   │   ├── loitering.go             # Detects if an object stays in a zone too long
+│   │   │   └── boundary_cross.go        # Virtual "Tripwire" logic for specific pixel lines
+│   │   ├── pan_tilt/
+│   │   │   └── tracking_controller.go   # Commands the motors to keep the 'Threat' centered
+│   │   └── alerts/
+│   │       └── notify_manager.go        # Manages Slack/Telegram/Local Alarm triggers
+│   ├── go.mod
+│   └── Dockerfile
+│
+├── command_dashboard/                   # React + TypeScript: The Sentry HUD
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── VideoStream.tsx          # Low-latency WebRTC feed with SVG overlays
+│   │   │   ├── ThreatList.tsx           # Sidebar of active 'Tracks' with confidence scores
+│   │   │   └── PerimeterEditor.tsx      # Interface to draw virtual tripwires on the map
+│   │   ├── hooks/
+│   │   │   └── useSentryWebsocket.ts    # Receives bounding box and track data from Go
+│   │   ├── App.tsx
+│   │   └── index.tsx
+│   ├── package.json
+│   └── Dockerfile
+│
+├── orchestration/
+│   └── docker-compose.jetson.yml        # Optimized setup for NVIDIA hardware
+├── Makefile
+└── README.md
