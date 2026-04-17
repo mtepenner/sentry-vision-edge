@@ -1,0 +1,88 @@
+version: "3.9"
+
+# Jetson-optimised Docker Compose stack for Sentry Vision Edge.
+# Requires NVIDIA Container Runtime:
+#   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+
+networks:
+  sentry_net:
+    driver: bridge
+
+volumes:
+  models:
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vision Engine – Python inference pipeline
+  # ---------------------------------------------------------------------------
+  vision_engine:
+    build:
+      context: ../vision_engine
+      dockerfile: Dockerfile
+    image: sentry/vision-engine:latest
+    runtime: nvidia                   # Jetson CUDA / TensorRT access
+    environment:
+      - THERMAL_DEVICE=${THERMAL_DEVICE:-/dev/video0}
+      - THERMAL_WIDTH=${THERMAL_WIDTH:-640}
+      - THERMAL_HEIGHT=${THERMAL_HEIGHT:-512}
+      - THERMAL_FPS=${THERMAL_FPS:-30}
+      - ENGINE_PATH=/models/custom_sentry_n.engine
+      - BRAIN_URL=http://behavioral_brain:8080/tracks
+      - CONF_THRESHOLD=${CONF_THRESHOLD:-0.35}
+      - SORT_MAX_AGE=${SORT_MAX_AGE:-3}
+      - SORT_MIN_HITS=${SORT_MIN_HITS:-3}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - models:/models
+      - /dev:/dev                     # expose V4L2 devices
+    devices:
+      - /dev/video0:/dev/video0
+    depends_on:
+      - behavioral_brain
+    networks:
+      - sentry_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Behavioral Brain – Go decision engine
+  # ---------------------------------------------------------------------------
+  behavioral_brain:
+    build:
+      context: ../behavioral_brain
+      dockerfile: Dockerfile
+    image: sentry/behavioral-brain:latest
+    environment:
+      - LISTEN_ADDR=:8080
+      - FRAME_WIDTH=${FRAME_WIDTH:-640}
+      - FRAME_HEIGHT=${FRAME_HEIGHT:-480}
+      - LOITER_THRESHOLD_SEC=${LOITER_THRESHOLD_SEC:-30}
+      - LOITER_ZONE=${LOITER_ZONE:-perimeter}
+      - PAN_GAIN=${PAN_GAIN:-1.0}
+      - TILT_GAIN=${TILT_GAIN:-1.0}
+      - DEAD_ZONE=${DEAD_ZONE:-0.05}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    ports:
+      - "8080:8080"
+    networks:
+      - sentry_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Command Dashboard – React / TypeScript HUD
+  # ---------------------------------------------------------------------------
+  command_dashboard:
+    build:
+      context: ../command_dashboard
+      dockerfile: Dockerfile
+    image: sentry/command-dashboard:latest
+    environment:
+      - VITE_WS_URL=ws://${JETSON_IP:-localhost}:8080/ws
+    ports:
+      - "3000:80"
+    depends_on:
+      - behavioral_brain
+    networks:
+      - sentry_net
+    restart: unless-stopped
