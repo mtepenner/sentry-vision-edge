@@ -25,6 +25,9 @@ jobs:
             image: behavioral-brain
           - service: command_dashboard
             image: command-dashboard
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4

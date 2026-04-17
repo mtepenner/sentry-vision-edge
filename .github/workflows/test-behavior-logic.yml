@@ -10,6 +10,8 @@ jobs:
   go-tests:
     name: Go Heuristic Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +32,8 @@ jobs:
   python-tests:
     name: Python Vision Engine Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +55,8 @@ jobs:
   typescript-tests:
     name: TypeScript Dashboard Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
