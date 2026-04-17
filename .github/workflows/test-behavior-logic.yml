@@ -1,0 +1,74 @@
+name: Test Behavioral Logic
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  go-tests:
+    name: Go Heuristic Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache-dependency-path: behavioral_brain/go.mod
+
+      - name: Run Go tests
+        working-directory: behavioral_brain
+        run: go test ./... -v
+
+      - name: Go vet
+        working-directory: behavioral_brain
+        run: go vet ./...
+
+  python-tests:
+    name: Python Vision Engine Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: vision_engine/requirements.txt
+
+      - name: Install dependencies
+        working-directory: vision_engine
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        working-directory: vision_engine
+        run: python -m pytest tests/ -v
+
+  typescript-tests:
+    name: TypeScript Dashboard Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: command_dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: command_dashboard
+        run: npm ci
+
+      - name: Type check
+        working-directory: command_dashboard
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        working-directory: command_dashboard
+        run: npm test
